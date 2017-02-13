@@ -1,0 +1,17 @@
+{
+    "name": "xiaker/gourd",
+    "description": "PHP Ioc Container",
+    "type": "library",
+    "require-dev": {
+        "phpunit/phpunit": "6.*"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "fatrbaby",
+            "email": "fatrbaby@qq.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}
