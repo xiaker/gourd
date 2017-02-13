@@ -16,7 +16,20 @@ class Container implements \ArrayAccess
 
     public function get($name)
     {
+        if (!isset($this->storage[$name])) {
+            throw new Exception();
+        }
 
+        $raw = $this->storage[$name];
+
+        if ($raw instanceof \Closure) {
+            return call_user_func($raw);
+        }
+
+        if (is_string($raw)) {
+           $reflection = new \ReflectionClass($raw);
+           return $reflection->newInstance();
+        }
     }
 
     public function instance($name, $instance)
