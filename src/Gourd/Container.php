@@ -3,6 +3,10 @@
 namespace Xiaker\Gourd;
 
 use \Exception;
+use \ReflectionClass;
+use \ReflectionFunction;
+use \ReflectionParameter;
+
 
 class Container implements \ArrayAccess
 {
@@ -14,7 +18,7 @@ class Container implements \ArrayAccess
         $this->factories = new \SplObjectStrorage();
     }
 
-    public function get($name)
+    public function make($name)
     {
         if (!isset($this->storage[$name])) {
             throw new Exception();
@@ -22,8 +26,12 @@ class Container implements \ArrayAccess
 
         $raw = $this->storage[$name];
 
+        if (is_object($raw)) {
+            return $raw;
+        }
+
         if ($raw instanceof \Closure) {
-            return call_user_func($raw);
+            $this->storage[$name] = $this->call($raw);
         }
 
         if (is_string($raw)) {
@@ -70,5 +78,37 @@ class Container implements \ArrayAccess
         if (isset($this->storage[$offset])) {
             unset($this->storage[$offset]);
         }
+    }
+
+    public function call($callable)
+    {
+        $reflection = new ReflectionFunction($callable);
+        $parameters = $reflection->getParameters();
+        $args = $this->parseArgs($parameters);
+
+        return $reflection->invokeArgs($args);
+    }
+
+    public function object($class)
+    {
+        $reflection = new ReflectionClass($class);
+    }
+
+    public function parseArgs(ReflectionParameter $parameter)
+    {
+        $args = [];
+
+        foreach ($parameter as $param) {
+            $class = $param->getClass();
+
+            if (null === $class) {
+                throw new \Exception();
+            }
+
+            $arg = $class->name;
+            $args[] = $this->get($arg);
+        }
+
+        return $args;
     }
 }
