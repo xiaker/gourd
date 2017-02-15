@@ -10,8 +10,10 @@ use \SplObjectStorage;
 
 class Container implements ContainerInterface, \ArrayAccess
 {
+    protected $singletons = [];
     protected $storage = [];
-    protected $factories;
+    protected $factories = [];
+    protected $reflections = [];
 
     public function __construct()
     {
@@ -20,75 +22,76 @@ class Container implements ContainerInterface, \ArrayAccess
 
     public function make($name)
     {
-        if (!isset($this->storage[$name])) {
-            throw new Exception();
-        }
-
-        $raw = $this->storage[$name];
-
-        if (is_object($raw)) {
-            return $raw;
-        }
+        $raw = $this->fetch($name);
 
         if ($raw instanceof \Closure) {
-            $this->storage[$name] = $this->call($raw);
+            return $this->call($raw);
         }
 
-        if (is_string($raw)) {
-           $reflection = new \ReflectionClass($raw);
-           return $reflection->newInstance();
-        }
+        return $this->build($raw);
     }
 
-    public function instance($name, $instance)
+    public function set($name, $concrete)
     {
-        $this->storage[$name] = $instance;
+        $this->storage[$name] = $concrete;
     }
 
     public function singleton($name, $concrete)
     {
-        if (isset($this->storage[$name])) {
-            throw new Exception('Can not reload Object.');
+        if (isset($this->singletons[$name])) {
+            throw new Exception('Can not rewrite singleton Object.');
         }
 
-        return $this->storage[$name] = $concrete;
+        return $this->singletons[$name] = $concrete;
     }
 
-    protected function getDependencies($class)
+    protected function fetch($name)
     {
+        if (isset($this->singletons[$name])) {
+            return $this->singletons[$name];
+        }
 
+        if (isset($this->storage[$name])) {
+            return $this->storage[$name];
+        }
+
+        throw new \TypeError('make a wrong type');
     }
 
-    public function call($callable)
+    protected function call($callable)
     {
         $reflection = new ReflectionFunction($callable);
         $parameters = $reflection->getParameters();
-        $args = $this->parseArgs($parameters);
+        $args = $this->getArguments($parameters);
 
         return $reflection->invokeArgs($args);
     }
 
-    public function object($class)
+    protected function build($class)
     {
         $reflection = new ReflectionClass($class);
+        $constructor = $reflection->getConstructor();
+        $parameters = $constructor->getParameters();
+        $arguments = $this->getArguments($parameters);
+
+        return $reflection->newInstanceArgs($arguments);
     }
 
-    public function parseArgs(ReflectionParameter $parameter)
+    protected function getArguments(ReflectionParameter $parameters)
     {
-        $args = [];
+        $arguments = [];
 
-        foreach ($parameter as $param) {
-            $class = $param->getClass();
-
-            if (null === $class) {
-                throw new \Exception();
+        foreach ($parameters as $parameter) {
+            if ($parameter->isDefaultValueAvailable()) {
+                $arguments[] = $parameter->getDefaultValue();
+            } elseif ($class = $parameter->getClass()->getName()) {
+                $arguments[] = $this->make($class);
+            } else {
+                throw new Exception();
             }
-
-            $arg = $class->name;
-            $args[] = $this->get($arg);
         }
 
-        return $args;
+        return $arguments;
     }
 
     public function offsetExists($offset)

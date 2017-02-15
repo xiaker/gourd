@@ -6,7 +6,7 @@ interface ContainerInterface
 {
     public function make($name);
 
-    public function instance($name, $instance);
+    public function set($name, $concrete);
 
     public function singleton($name, $concrete);
 }
