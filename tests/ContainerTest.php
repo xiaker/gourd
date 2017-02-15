@@ -1,13 +1,13 @@
 <?php
 
-use Xiaker\Gourd\Container;
 use PHPUnit\Framework\TestCase;
+use Xiaker\Gourd\Container;
 use Xiaker\Tests\Logger;
 use Xiaker\Tests\Handler;
 
 class ContainerTest extends TestCase
 {
-    public function testSetObject()
+    public function testSetBinding()
     {
         $container = new Container();
         $instance = new stdClass();
@@ -15,6 +15,16 @@ class ContainerTest extends TestCase
         $container->set('stdClass', $instance);
 
         $this->assertAttributeEquals(['stdClass' => $instance], 'storage', $container);
+    }
+
+    public function testSingletonBinding()
+    {
+        $container = new Container();
+        $instance = new stdClass();
+
+        $container->singleton('stdClass', $instance);
+
+        $this->assertAttributeEquals(['stdClass' => $instance], 'singletons', $container);
     }
 
     public function testMakeCallback()
@@ -31,7 +41,7 @@ class ContainerTest extends TestCase
         $this->assertEquals($instance, $made);
     }
 
-    public function testDependenciesMake()
+    public function testMakeDependencies()
     {
         $container = new Container();
         $container->set(Logger::class, Logger::class);
@@ -51,13 +61,15 @@ class ContainerTest extends TestCase
         $this->assertEquals('fatrbaby', $container->make('handler')->author());
     }
 
-    /**
-     * @expectedException \TypeError
-     */
-    public function testMakeError()
+    public function testDefaultValueCallback()
     {
         $container = new Container();
-        $container->make('nonexistent');
+        $container->set('cb', function ($name = 'fatrbaby') {
+            echo $name, PHP_EOL;
+            return 'hello ' . $name;
+        });
+
+        $this->assertEquals('hello fatrbaby', $container->make('cb'));
     }
 
     public function testArraySet()
@@ -76,8 +88,25 @@ class ContainerTest extends TestCase
         $this->assertEquals('fatrbaby', $container['handler']->author());
     }
 
+    public function testArrayIsset()
+    {
+        $container = new Container();
+        $container->set('handler', new Handler());
+        $this->assertTrue(isset($container['handler']));
+    }
+
     /**
-     * @expectedException \TypeError
+     * @expectedException \LogicException
+     */
+    public function testOverrideSingletonBinding()
+    {
+        $container = new Container();
+        $container->singleton('handler', new Handler());
+        $container->singleton('handler', new stdClass());
+    }
+
+    /**
+     * @expectedException \OutOfBoundsException
      */
     public function testArrayUnset()
     {
@@ -87,10 +116,36 @@ class ContainerTest extends TestCase
         $container->make('handler');
     }
 
-    public function testArrayIsset()
+    /**
+     * @expectedException \OutOfBoundsException
+     */
+    public function testMakeError()
     {
         $container = new Container();
-        $container->set('handler', new Handler());
-        $this->assertTrue(isset($container['handler']));
+        $container->make('nonexistent');
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testInvalidArgumentBinding()
+    {
+        $container = new Container();
+        $container->set('who', function ($num) {
+            return $num + 1;
+        });
+
+        $who = $container->make('who');
+
+        var_dump($who);
+    }
+
+    /**
+     * @expectedException \OutOfBoundsException
+     */
+    public function testUndefinedIndex()
+    {
+        $container = new Container();
+        $binding = $container['undefined'];
     }
 }
