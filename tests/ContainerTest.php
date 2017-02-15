@@ -59,4 +59,38 @@ class ContainerTest extends TestCase
         $container = new Container();
         $container->make('nonexistent');
     }
+
+    public function testArraySet()
+    {
+        $container = new Container();
+        $container['handler'] = new Handler();
+
+        $this->assertEquals('fatrbaby', $container->make('handler')->author());
+    }
+
+    public function testArrayGet()
+    {
+        $container = new Container();
+        $container->set('handler', new Handler());
+
+        $this->assertEquals('fatrbaby', $container['handler']->author());
+    }
+
+    /**
+     * @expectedException \TypeError
+     */
+    public function testArrayUnset()
+    {
+        $container = new Container();
+        $container->set('handler', new Handler());
+        unset($container['handler']);
+        $container->make('handler');
+    }
+
+    public function testArrayIsset()
+    {
+        $container = new Container();
+        $container->set('handler', new Handler());
+        $this->assertTrue(isset($container['handler']));
+    }
 }

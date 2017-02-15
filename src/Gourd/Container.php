@@ -46,7 +46,7 @@ class Container implements ContainerInterface, \ArrayAccess
             throw new Exception('Can not rewrite singleton Object.');
         }
 
-        return $this->singletons[$name] = $concrete;
+        $this->singletons[$name] = $concrete;
     }
 
     protected function fetch($name)
