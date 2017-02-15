@@ -50,4 +50,13 @@ class ContainerTest extends TestCase
 
         $this->assertEquals('fatrbaby', $container->make('handler')->author());
     }
+
+    /**
+     * @expectedException \TypeError
+     */
+    public function testMakeError()
+    {
+        $container = new Container();
+        $container->make('nonexistent');
+    }
 }
