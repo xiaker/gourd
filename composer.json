@@ -15,8 +15,13 @@
     ],
     "minimum-stability": "stable",
     "autoload": {
-        "psr-4" : {
+        "psr-4": {
             "Xiaker\\Gourd\\": "src/Gourd"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Xiaker\\Tests\\": "tests/Case"
         }
     }
 }

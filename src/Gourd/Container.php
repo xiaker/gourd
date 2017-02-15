@@ -28,6 +28,10 @@ class Container implements ContainerInterface, \ArrayAccess
             return $this->call($raw);
         }
 
+        if (is_object($raw)) {
+            return $raw;
+        }
+
         return $this->build($raw);
     }
 
@@ -71,13 +75,18 @@ class Container implements ContainerInterface, \ArrayAccess
     {
         $reflection = new ReflectionClass($class);
         $constructor = $reflection->getConstructor();
+
+        if (null === $constructor) {
+            return $reflection->newInstance();
+        }
+
         $parameters = $constructor->getParameters();
         $arguments = $this->getArguments($parameters);
 
         return $reflection->newInstanceArgs($arguments);
     }
 
-    protected function getArguments(ReflectionParameter $parameters)
+    protected function getArguments($parameters)
     {
         $arguments = [];
 
