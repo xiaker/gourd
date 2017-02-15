@@ -2,10 +2,11 @@
 
 namespace Xiaker\Gourd;
 
-use \Exception;
+use \InvalidArgumentException;
+use \OutOfBoundsException;
+use \LogicException;
 use \ReflectionClass;
 use \ReflectionFunction;
-use \ReflectionParameter;
 use \SplObjectStorage;
 
 class Container implements ContainerInterface, \ArrayAccess
@@ -43,7 +44,7 @@ class Container implements ContainerInterface, \ArrayAccess
     public function singleton($name, $concrete)
     {
         if (isset($this->singletons[$name])) {
-            throw new Exception('Can not rewrite singleton Object.');
+            throw new LogicException('Cannot override singleton binding.');
         }
 
         $this->singletons[$name] = $concrete;
@@ -59,7 +60,7 @@ class Container implements ContainerInterface, \ArrayAccess
             return $this->storage[$name];
         }
 
-        throw new \TypeError('make a wrong type');
+        throw new OutOfBoundsException('Your make instance does not contain.');
     }
 
     protected function call($callable)
@@ -93,10 +94,10 @@ class Container implements ContainerInterface, \ArrayAccess
         foreach ($parameters as $parameter) {
             if ($parameter->isDefaultValueAvailable()) {
                 $arguments[] = $parameter->getDefaultValue();
-            } elseif ($class = $parameter->getClass()->getName()) {
-                $arguments[] = $this->make($class);
+            } elseif ($class = $parameter->getClass()) {
+                $arguments[] = $this->make($class->getName());
             } else {
-                throw new Exception();
+                throw new InvalidArgumentException(sprintf('Unable to resolve parameter: %s', $parameter->getName()));
             }
         }
 
@@ -110,11 +111,11 @@ class Container implements ContainerInterface, \ArrayAccess
 
     public function offsetGet($offset)
     {
-        if ($this->storage[$offset]) {
+        if (isset($this->storage[$offset])) {
             return $this->storage[$offset];
         }
 
-        throw new Exception('Undefined offset of Container.');
+        throw new OutOfBoundsException('Undefined offset of Container.');
     }
 
     public function offsetSet($offset, $value)
