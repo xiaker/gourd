@@ -6,16 +6,16 @@ use \Exception;
 use \ReflectionClass;
 use \ReflectionFunction;
 use \ReflectionParameter;
+use \SplObjectStorage;
 
-
-class Container implements \ArrayAccess
+class Container implements ContainerInterface, \ArrayAccess
 {
     protected $storage = [];
     protected $factories;
 
     public function __construct()
     {
-        $this->factories = new \SplObjectStrorage();
+        $this->factories = new SplObjectStorage();
     }
 
     public function make($name)
@@ -54,30 +54,9 @@ class Container implements \ArrayAccess
         return $this->storage[$name] = $concrete;
     }
 
-    public function offsetExists($offset)
+    protected function getDependencies($class)
     {
-        return isset($this->storage[$offset]);
-    }
 
-    public function offsetGet($offset)
-    {
-        if ($this->storage[$offset]) {
-            return $this->storage[$offset];
-        }
-
-        throw new Exception('Undefined offset of Container.');
-    }
-
-    public function offsetSet($offset, $value)
-    {
-        $this->storage[$offset] = $value;
-    }
-
-    public function offsetUnset($offset)
-    {
-        if (isset($this->storage[$offset])) {
-            unset($this->storage[$offset]);
-        }
     }
 
     public function call($callable)
@@ -110,5 +89,31 @@ class Container implements \ArrayAccess
         }
 
         return $args;
+    }
+
+    public function offsetExists($offset)
+    {
+        return isset($this->storage[$offset]);
+    }
+
+    public function offsetGet($offset)
+    {
+        if ($this->storage[$offset]) {
+            return $this->storage[$offset];
+        }
+
+        throw new Exception('Undefined offset of Container.');
+    }
+
+    public function offsetSet($offset, $value)
+    {
+        $this->storage[$offset] = $value;
+    }
+
+    public function offsetUnset($offset)
+    {
+        if (isset($this->storage[$offset])) {
+            unset($this->storage[$offset]);
+        }
     }
 }
