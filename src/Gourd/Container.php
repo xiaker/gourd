@@ -23,7 +23,7 @@ class Container implements ContainerInterface, \ArrayAccess
 
     public function make($name)
     {
-        $raw = $this->fetch($name);
+        $raw = $this->raw($name);
 
         if ($raw instanceof \Closure) {
             return $this->call($raw);
@@ -50,7 +50,7 @@ class Container implements ContainerInterface, \ArrayAccess
         $this->singletons[$name] = $concrete;
     }
 
-    protected function fetch($name)
+    protected function raw($name)
     {
         if (isset($this->singletons[$name])) {
             return $this->singletons[$name];
@@ -97,7 +97,7 @@ class Container implements ContainerInterface, \ArrayAccess
             } elseif ($class = $parameter->getClass()) {
                 $arguments[] = $this->make($class->getName());
             } else {
-                throw new InvalidArgumentException(sprintf('Unable to resolve parameter: %s', $parameter->getName()));
+                throw new InvalidArgumentException(sprintf('Unable to resolve parameter: $%s', $parameter->getName()));
             }
         }
 
