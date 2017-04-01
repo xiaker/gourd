@@ -2,7 +2,9 @@
     "name": "xiaker/gourd",
     "description": "PHP Ioc Container",
     "type": "library",
-    "require": {},
+    "require": {
+        "psr/container": "1.0.0"
+    },
     "require-dev": {
         "phpunit/phpunit": "6.*"
     },
