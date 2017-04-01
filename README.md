@@ -9,7 +9,7 @@ PHP IoC container
 
 ```php
 
-$container = new Xiaker\Gourd;
+$container = new Xiaker\Gourd\Container;
 
 $container->set(User::class, function () {
     return new User();
