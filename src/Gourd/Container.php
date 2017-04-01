@@ -2,12 +2,10 @@
 
 namespace Xiaker\Gourd;
 
-use ArrayAccess;
-use Countable;
 use Closure;
+use Countable;
+use ArrayAccess;
 use Psr\Container\ContainerInterface;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 
 class Container implements ContainerInterface, ArrayAccess, Countable
 {
