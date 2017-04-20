@@ -2,8 +2,8 @@
 
 use PHPUnit\Framework\TestCase;
 use Xiaker\Gourd\Container;
-use Xiaker\Tests\Logger;
-use Xiaker\Tests\Handler;
+use Tests\Logger;
+use Tests\Handler;
 
 class ContainerTest extends TestCase
 {
