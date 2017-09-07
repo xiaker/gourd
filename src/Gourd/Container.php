@@ -2,28 +2,46 @@
 
 namespace Xiaker\Gourd;
 
+use ArrayAccess;
 use Closure;
 use Countable;
-use ArrayAccess;
 use Psr\Container\ContainerInterface;
+use ReflectionClass;
+use ReflectionFunction;
 
 class Container implements ContainerInterface, ArrayAccess, Countable
 {
     protected $bindings = [];
+    protected $singletons = [];
+    protected $instances = [];
 
     public function get($id)
     {
+        $id = $this->normalizeId($id);
+
         if (!$this->has($id)) {
             throw new NotFoundException();
         }
 
-        $raw = $this->bindings[$id];
-
-        if ($raw instanceof Closure) {
-            return $this->call($raw);
+        if (
+            isset($this->singletons[$id]) &&
+            $this->singletons[$id] &&
+            isset($this->instances[$id])
+        ) {
+            return $this->instances[$id];
         }
 
-        return $this->make($raw);
+        $binding = $this->bindings[$id];
+
+        if ($binding instanceof Closure) {
+            return $this->call($binding);
+        }
+
+        if (is_object($binding)) {
+            return $binding;
+        }
+
+        return $this->build($binding);
     }
 
     public function has($id)
@@ -31,14 +49,76 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         return $this->offsetExists($id);
     }
 
-    public function call(Closure $id)
+    public function set($id, $binding, $singleton = true)
     {
-        // todo
+        if ($singleton) {
+            return $this->singleton($id, $binding);
+        }
+
+        $id = $this->normalizeId($id);
+        $this->singletons[$id] = false;
+        $this->bindings[$id] = $binding;
+
+        return true;
     }
 
-    public function make($id, $singleton = true)
+    public function singleton($id, $binding)
     {
-        // todo
+        $id = $this->normalizeId($id);
+        $this->singletons[$id] = true;
+        $this->bindings[$id] = $binding;
+
+        return true;
+    }
+
+    public function call(Closure $id)
+    {
+        $reflection = new ReflectionFunction($id);
+        $parameters = $reflection->getParameters();
+        $args = $this->buildParameterValues($parameters);
+
+        return $reflection->invokeArgs($args);
+    }
+
+    public function build($class)
+    {
+        $reflection = new ReflectionClass($class);
+        $constructor = $reflection->getConstructor();
+
+        if (null === $constructor) {
+            return $reflection->newInstance();
+        }
+
+        $parameters = $constructor->getParameters();
+        $arguments = $this->buildParameterValues($parameters);
+
+        return $reflection->newInstanceArgs($arguments);
+    }
+
+    protected function buildParameterValues(array $parameters)
+    {
+        $arguments = [];
+
+        foreach ($parameters as $parameter) {
+            if ($parameter->isDefaultValueAvailable()) {
+                $arguments[] = $parameter->getDefaultValue();
+            } elseif ($class = $parameter->getClass()) {
+                $arguments[] = $this->make($class->getName());
+            } else {
+                throw new ContainerException(sprintf('Unable to resolve parameter: $%s', $parameter->getName()));
+            }
+        }
+
+        return $arguments;
+    }
+
+    protected function normalizeId($id)
+    {
+        if (is_scalar($id)) {
+            return $id;
+        }
+
+        return json_encode($id);
     }
 
     public function offsetGet($offset)
