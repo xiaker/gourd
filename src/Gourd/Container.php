@@ -46,7 +46,9 @@ class Container implements ContainerInterface, ArrayAccess, Countable
 
     public function has($id)
     {
-        return $this->offsetExists($id);
+        $id = $this->normalizeId($id);
+
+        return isset($this->bindings[$id]);
     }
 
     public function set($id, $binding, $singleton = true)
@@ -103,7 +105,7 @@ class Container implements ContainerInterface, ArrayAccess, Countable
             if ($parameter->isDefaultValueAvailable()) {
                 $arguments[] = $parameter->getDefaultValue();
             } elseif ($class = $parameter->getClass()) {
-                $arguments[] = $this->make($class->getName());
+                $arguments[] = $this->get($class->getName());
             } else {
                 throw new ContainerException(sprintf('Unable to resolve parameter: $%s', $parameter->getName()));
             }
@@ -123,30 +125,22 @@ class Container implements ContainerInterface, ArrayAccess, Countable
 
     public function offsetGet($offset)
     {
-        if ($this->offsetExists($offset)) {
-            return $this->bindings[$offset];
-        }
-
-        throw new NotFoundException();
+        return $this->get($offset);
     }
 
     public function offsetExists($offset)
     {
-        return isset($this->bindings[$offset]);
+        return $this->has($offset);
     }
 
     public function offsetSet($offset, $value)
     {
-        if ($this->offsetExists($offset)) {
-            throw new ContainerException('Offset always ready exists.');
-        }
-
-        $this->bindings[$offset] = $value;
+        return $this->singleton($offset, $value);
     }
 
     public function offsetUnset($offset)
     {
-        if ($this->offsetExists($offset)) {
+        if ($this->has($offset)) {
             unset($this->bindings[$offset]);
         }
     }
