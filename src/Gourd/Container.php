@@ -2,87 +2,87 @@
 
 namespace Xiaker\Gourd;
 
-use \InvalidArgumentException;
-use \OutOfBoundsException;
-use \LogicException;
-use \ReflectionClass;
-use \ReflectionFunction;
-use \SplObjectStorage;
+use ArrayAccess;
+use Closure;
+use Countable;
+use Psr\Container\ContainerInterface;
+use ReflectionClass;
+use ReflectionFunction;
 
-class Container implements ContainerInterface, \ArrayAccess
+class Container implements ContainerInterface, ArrayAccess, Countable
 {
-    protected $singletons = [];
-    protected $storage = [];
-    protected $factories = [];
     protected $bindings = [];
+    protected $singletons = [];
+    protected $instances = [];
 
-    public function __construct()
+    public function get($id)
     {
-        $this->factories = new SplObjectStorage();
+        $id = $this->normalizeId($id);
+
+        if (!$this->has($id)) {
+            throw new NotFoundException();
+        }
+
+        if (
+            isset($this->singletons[$id]) &&
+            $this->singletons[$id] &&
+            isset($this->instances[$id])
+        ) {
+            return $this->instances[$id];
+        }
+
+        $binding = $this->bindings[$id];
+
+        if ($binding instanceof Closure) {
+            return $this->call($binding);
+        }
+
+        if (is_object($binding)) {
+            return $binding;
+        }
+
+        return $this->build($binding);
     }
 
-    public function make($name)
+    public function has($id)
     {
-        if (isset($this->bindings[$name])) {
-            return $this->bindings[$name];
-        }
+        $id = $this->normalizeId($id);
 
-        $raw = $this->raw($name);
-
-        if ($raw instanceof \Closure) {
-            return $this->call($raw);
-        }
-
-        if (is_object($raw)) {
-            return $raw;
-        }
-
-        $this->bindings[$name] = $this->build($raw);
-
-        return $this->bindings[$name];
+        return isset($this->bindings[$id]);
     }
 
-    public function set($name, $concrete)
+    public function set($id, $binding, $singleton = true)
     {
-        $this->storage[$name] = $concrete;
+        if ($singleton) {
+            return $this->singleton($id, $binding);
+        }
+
+        $id = $this->normalizeId($id);
+        $this->singletons[$id] = false;
+        $this->bindings[$id] = $binding;
+
+        return true;
     }
 
-    public function singleton($name, $concrete)
+    public function singleton($id, $binding)
     {
-        if (isset($this->storage[$name])) {
-            throw new LogicException('Binding already exists.');
-        }
+        $id = $this->normalizeId($id);
+        $this->singletons[$id] = true;
+        $this->bindings[$id] = $binding;
 
-        if (isset($this->singletons[$name])) {
-            throw new LogicException('Cannot override singleton binding.');
-        }
-
-        $this->singletons[$name] = $concrete;
+        return true;
     }
 
-    protected function raw($name)
+    public function call(Closure $id)
     {
-        if (isset($this->singletons[$name])) {
-            return $this->singletons[$name];
-        }
-
-        if (isset($this->storage[$name])) {
-            return $this->storage[$name];
-        }
-
-        throw new OutOfBoundsException('Your make instance does not contain.');
-    }
-
-    protected function call($callable)
-    {
-        $reflection = new ReflectionFunction($callable);
+        $reflection = new ReflectionFunction($id);
         $parameters = $reflection->getParameters();
-        $args = $this->getArguments($parameters);
+        $args = $this->buildParameterValues($parameters);
 
         return $reflection->invokeArgs($args);
     }
 
-    protected function build($class)
+    public function build($class)
     {
         $reflection = new ReflectionClass($class);
         $constructor = $reflection->getConstructor();
@@ -92,12 +92,12 @@ class Container implements ContainerInterface, \ArrayAccess
         }
 
         $parameters = $constructor->getParameters();
-        $arguments = $this->getArguments($parameters);
+        $arguments = $this->buildParameterValues($parameters);
 
         return $reflection->newInstanceArgs($arguments);
     }
 
-    protected function getArguments($parameters)
+    protected function buildParameterValues(array $parameters)
     {
         $arguments = [];
 
@@ -105,38 +105,48 @@ class Container implements ContainerInterface, \ArrayAccess
             if ($parameter->isDefaultValueAvailable()) {
                 $arguments[] = $parameter->getDefaultValue();
             } elseif ($class = $parameter->getClass()) {
-                $arguments[] = $this->make($class->getName());
+                $arguments[] = $this->get($class->getName());
             } else {
-                throw new InvalidArgumentException(sprintf('Unable to resolve parameter: $%s', $parameter->getName()));
+                throw new ContainerException(sprintf('Unable to resolve parameter: $%s', $parameter->getName()));
             }
         }
 
         return $arguments;
     }
 
-    public function offsetExists($offset)
+    protected function normalizeId($id)
     {
-        return isset($this->storage[$offset]);
+        if (is_scalar($id)) {
+            return $id;
+        }
+
+        return json_encode($id);
     }
 
     public function offsetGet($offset)
     {
-        if (isset($this->storage[$offset])) {
-            return $this->storage[$offset];
-        }
+        return $this->get($offset);
+    }
 
-        throw new OutOfBoundsException('Undefined offset of Container.');
+    public function offsetExists($offset)
+    {
+        return $this->has($offset);
     }
 
     public function offsetSet($offset, $value)
     {
-        $this->storage[$offset] = $value;
+        return $this->singleton($offset, $value);
     }
 
     public function offsetUnset($offset)
     {
-        if (isset($this->storage[$offset])) {
-            unset($this->storage[$offset]);
+        if ($this->has($offset)) {
+            unset($this->bindings[$offset]);
         }
+    }
+
+    public function count()
+    {
+        return count($this->bindings);
     }
 }

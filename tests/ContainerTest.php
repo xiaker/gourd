@@ -2,150 +2,96 @@
 
 use PHPUnit\Framework\TestCase;
 use Xiaker\Gourd\Container;
-use Xiaker\Tests\Logger;
-use Xiaker\Tests\Handler;
+use Tests\Fixtures\Author;
+use Tests\Fixtures\AuthorInterface;
+use Tests\Fixtures\Book;
+use Tests\Fixtures\Reader;
+use Tests\Fixtures\ReaderInterface;
 
 class ContainerTest extends TestCase
 {
     public function testSetBinding()
     {
         $container = new Container();
-        $instance = new stdClass();
+        $container->set('cb', function () {
+            return true;
+        });
 
-        $container->set('stdClass', $instance);
-
-        $this->assertAttributeEquals(['stdClass' => $instance], 'storage', $container);
+        $this->assertTrue($container->get('cb'));
     }
 
     public function testSingletonBinding()
     {
         $container = new Container();
-        $instance = new stdClass();
+        $container->singleton('cb', function () {
+            return true;
+        });
 
-        $container->singleton('stdClass', $instance);
-
-        $this->assertAttributeEquals(['stdClass' => $instance], 'singletons', $container);
+        $this->assertTrue($container->get('cb'));
     }
 
     public function testMakeCallback()
     {
         $container = new Container();
-        $instance = new stdClass();
-
-        $container->singleton('cb', function () use ($instance) {
-            return $instance;
+        $container->singleton('cb', function () {
+            return new Author();
         });
 
-        $made = $container->make('cb');
-
-        $this->assertEquals($instance, $made);
+        $this->assertEquals(new Author(), $container->get('cb'));
     }
 
     public function testMakeDependencies()
     {
         $container = new Container();
-        $container->set(Logger::class, Logger::class);
-        $container->singleton(Handler::class, Handler::class);
-        $handler = $container->make(Handler::class);
-        $logger = $container->make(Logger::class);
+        $container->singleton(AuthorInterface::class, Author::class);
+        $container->singleton(ReaderInterface::class, Reader::class);
+        $container->singleton('book', Book::class);
 
-        $this->assertEquals(new Logger($handler), $logger);
+        $this->assertEquals('fatrbaby', $container->get('book')->getName());
     }
 
     public function testMakeObjectToUse()
     {
         $container = new Container();
-        $handler = new Handler();
-        $container->set('handler', $handler);
+        $container->set('reader', Reader::class, true);
 
-        $this->assertEquals('fatrbaby', $container->make('handler')->author());
+        $reader = $container->get('reader');
+        $this->assertEquals(true, $reader->isLike());
     }
 
     public function testDefaultValueCallback()
     {
         $container = new Container();
-        $container->set('cb', function ($name = 'fatrbaby') {
-            echo $name, PHP_EOL;
-            return 'hello ' . $name;
+        $container->singleton('age', function ($age = 17) {
+            return $age + 1;
         });
 
-        $this->assertEquals('hello fatrbaby', $container->make('cb'));
+        $this->assertEquals(18, $container->get('age'));
     }
 
     public function testArraySet()
     {
         $container = new Container();
-        $container['handler'] = new Handler();
+        $container['author'] = Author::class;
 
-        $this->assertEquals('fatrbaby', $container->make('handler')->author());
+        $this->assertEquals('fatrbaby', $container->get('author')->getName());
     }
 
     public function testArrayGet()
     {
         $container = new Container();
-        $container->set('handler', new Handler());
+        $container->singleton('cb', function () {
+            return true;
+        });
 
-        $this->assertEquals('fatrbaby', $container['handler']->author());
+        $this->assertTrue($container['cb']);
     }
 
     public function testArrayIsset()
     {
         $container = new Container();
-        $container->set('handler', new Handler());
-        $this->assertTrue(isset($container['handler']));
-    }
+        $container->singleton('std', new stdClass());
 
-    /**
-     * @expectedException \LogicException
-     */
-    public function testOverrideSingletonBinding()
-    {
-        $container = new Container();
-        $container->singleton('handler', new Handler());
-        $container->singleton('handler', new stdClass());
-    }
-
-    /**
-     * @expectedException \OutOfBoundsException
-     */
-    public function testArrayUnset()
-    {
-        $container = new Container();
-        $container->set('handler', new Handler());
-        unset($container['handler']);
-        $container->make('handler');
-    }
-
-    /**
-     * @expectedException \OutOfBoundsException
-     */
-    public function testMakeError()
-    {
-        $container = new Container();
-        $container->make('nonexistent');
-    }
-
-    /**
-     * @expectedException \InvalidArgumentException
-     */
-    public function testInvalidArgumentBinding()
-    {
-        $container = new Container();
-        $container->set('who', function ($num) {
-            return $num + 1;
-        });
-
-        $who = $container->make('who');
-
-        var_dump($who);
-    }
-
-    /**
-     * @expectedException \OutOfBoundsException
-     */
-    public function testUndefinedIndex()
-    {
-        $container = new Container();
-        $binding = $container['undefined'];
+        $this->assertTrue(isset($container['std']));
     }
 }
