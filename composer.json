@@ -1,6 +1,6 @@
 {
     "name": "xiaker/gourd",
-    "description": "PHP Ioc Container",
+    "description": "Lightweight PHP IoC container",
     "type": "library",
     "require": {
         "psr/container": "1.0.0",
