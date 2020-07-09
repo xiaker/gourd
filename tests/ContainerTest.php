@@ -1,12 +1,15 @@
 <?php
 
+namespace Tests;
+
 use PHPUnit\Framework\TestCase;
-use Xiaker\Gourd\Container;
 use Tests\Fixtures\Author;
 use Tests\Fixtures\AuthorInterface;
 use Tests\Fixtures\Book;
+use Tests\Fixtures\DemoServiceProvider;
 use Tests\Fixtures\Reader;
 use Tests\Fixtures\ReaderInterface;
+use Xiaker\Gourd\Container;
 
 class ContainerTest extends TestCase
 {
@@ -90,8 +93,16 @@ class ContainerTest extends TestCase
     public function testArrayIsset()
     {
         $container = new Container();
-        $container->singleton('std', new stdClass());
+        $container->singleton('std', new \stdClass());
 
         $this->assertTrue(isset($container['std']));
+    }
+
+    public function testServiceProvider()
+    {
+        $container = new Container();
+        $container->register(new DemoServiceProvider());
+
+        $this->assertEquals('FromDemoServiceProvider', $container->get('demo'));
     }
 }

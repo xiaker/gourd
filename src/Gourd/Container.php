@@ -75,6 +75,13 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         return true;
     }
 
+    public function register(ServiceProviderInterface $provider)
+    {
+        $provider->register($this);
+
+        return $this;
+    }
+
     public function call(Closure $id)
     {
         $reflection = new ReflectionFunction($id);
