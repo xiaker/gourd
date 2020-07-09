@@ -3,10 +3,10 @@
     "description": "Lightweight PHP IoC container",
     "type": "library",
     "require": {
-        "psr/container": "1.0.0",
-        "phpunit/phpunit": "~6.0"
+        "psr/container": "1.0.0"
     },
     "require-dev": {
+        "phpunit/phpunit": "^8.5"
     },
     "license": "MIT",
     "authors": [

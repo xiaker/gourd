@@ -1,6 +1,6 @@
 <?php
 
-namespace Xiaker\Gourd;
+namespace Xiaker\Gourd\Exception;
 
 use Exception;
 use Psr\Container\ContainerExceptionInterface;

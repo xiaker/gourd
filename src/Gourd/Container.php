@@ -8,6 +8,8 @@ use Countable;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionFunction;
+use Xiaker\Gourd\Exception\ContainerException;
+use Xiaker\Gourd\Exception\NotFoundException;
 
 class Container implements ContainerInterface, ArrayAccess, Countable
 {
@@ -120,7 +122,7 @@ class Container implements ContainerInterface, ArrayAccess, Countable
             return $id;
         }
 
-        return json_encode($id);
+        return md5($id);
     }
 
     public function offsetGet($offset)
