@@ -3,6 +3,7 @@
     "description": "Lightweight PHP IoC container",
     "type": "library",
     "require": {
+        "php": "> 7.*",
         "psr/container": "1.0.0"
     },
     "require-dev": {
@@ -23,7 +24,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\Fixtures\\": "tests/Fixtures"
+            "Tests\\": "tests"
         }
     }
 }

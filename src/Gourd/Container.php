@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xiaker\Gourd;
 
 use ArrayAccess;
@@ -19,17 +21,13 @@ class Container implements ContainerInterface, ArrayAccess, Countable
 
     public function get($id)
     {
-        $id = $this->normalizeId($id);
+        $this->checkId($id);
 
         if (!$this->has($id)) {
             throw new NotFoundException();
         }
 
-        if (
-            isset($this->singletons[$id]) &&
-            $this->singletons[$id] &&
-            isset($this->instances[$id])
-        ) {
+        if (isset($this->instances[$id])) {
             return $this->instances[$id];
         }
 
@@ -43,33 +41,22 @@ class Container implements ContainerInterface, ArrayAccess, Countable
             return $binding;
         }
 
-        return $this->build($binding);
+        $built = $this->build($binding);
+        $this->bindings[$id] = $built;
+
+        return $built;
     }
 
-    public function has($id)
+    public function has($id): bool
     {
-        $id = $this->normalizeId($id);
+        $this->checkId($id);
 
         return isset($this->bindings[$id]);
     }
 
-    public function set($id, $binding, $singleton = true)
+    public function set($id, $binding): bool
     {
-        if ($singleton) {
-            return $this->singleton($id, $binding);
-        }
-
-        $id = $this->normalizeId($id);
-        $this->singletons[$id] = false;
-        $this->bindings[$id] = $binding;
-
-        return true;
-    }
-
-    public function singleton($id, $binding)
-    {
-        $id = $this->normalizeId($id);
-        $this->singletons[$id] = true;
+        $this->checkId($id);
         $this->bindings[$id] = $binding;
 
         return true;
@@ -123,13 +110,11 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         return $arguments;
     }
 
-    protected function normalizeId($id)
+    public function checkId($id)
     {
-        if (is_scalar($id)) {
-            return $id;
+        if (!is_scalar($id)) {
+            throw new ContainerException('Invalid Container id');
         }
-
-        return md5($id);
     }
 
     public function offsetGet($offset)
@@ -144,13 +129,14 @@ class Container implements ContainerInterface, ArrayAccess, Countable
 
     public function offsetSet($offset, $value)
     {
-        return $this->singleton($offset, $value);
+        return $this->set($offset, $value);
     }
 
     public function offsetUnset($offset)
     {
         if ($this->has($offset)) {
             unset($this->bindings[$offset]);
+            unset($this->instances[$offset]);
         }
     }
 

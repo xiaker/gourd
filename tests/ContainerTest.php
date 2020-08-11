@@ -23,20 +23,10 @@ class ContainerTest extends TestCase
         $this->assertTrue($container->get('cb'));
     }
 
-    public function testSingletonBinding()
-    {
-        $container = new Container();
-        $container->singleton('cb', function () {
-            return true;
-        });
-
-        $this->assertTrue($container->get('cb'));
-    }
-
     public function testMakeCallback()
     {
         $container = new Container();
-        $container->singleton('cb', function () {
+        $container->set('cb', function () {
             return new Author();
         });
 
@@ -46,9 +36,9 @@ class ContainerTest extends TestCase
     public function testMakeDependencies()
     {
         $container = new Container();
-        $container->singleton(AuthorInterface::class, Author::class);
-        $container->singleton(ReaderInterface::class, Reader::class);
-        $container->singleton('book', Book::class);
+        $container->set(AuthorInterface::class, Author::class);
+        $container->set(ReaderInterface::class, Reader::class);
+        $container->set('book', Book::class);
 
         $this->assertEquals('fatrbaby', $container->get('book')->getName());
     }
@@ -56,7 +46,7 @@ class ContainerTest extends TestCase
     public function testMakeObjectToUse()
     {
         $container = new Container();
-        $container->set('reader', Reader::class, true);
+        $container->set('reader', Reader::class);
 
         $reader = $container->get('reader');
         $this->assertEquals(true, $reader->isLike());
@@ -65,7 +55,7 @@ class ContainerTest extends TestCase
     public function testDefaultValueCallback()
     {
         $container = new Container();
-        $container->singleton('age', function ($age = 17) {
+        $container->set('age', function ($age = 17) {
             return $age + 1;
         });
 
@@ -83,7 +73,7 @@ class ContainerTest extends TestCase
     public function testArrayGet()
     {
         $container = new Container();
-        $container->singleton('cb', function () {
+        $container->set('cb', function () {
             return true;
         });
 
@@ -93,7 +83,7 @@ class ContainerTest extends TestCase
     public function testArrayIsset()
     {
         $container = new Container();
-        $container->singleton('std', new \stdClass());
+        $container->set('std', new \stdClass());
 
         $this->assertTrue(isset($container['std']));
     }
