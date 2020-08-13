@@ -3,7 +3,7 @@
     "description": "Lightweight PHP IoC container",
     "type": "library",
     "require": {
-        "php": "> 7.*",
+        "php": ">=7.0.0",
         "psr/container": "1.0.0"
     },
     "require-dev": {
