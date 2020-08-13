@@ -16,13 +16,10 @@ use Xiaker\Gourd\Exception\NotFoundException;
 class Container implements ContainerInterface, ArrayAccess, Countable
 {
     protected $bindings = [];
-    protected $singletons = [];
     protected $instances = [];
 
     public function get($id)
     {
-        $this->checkId($id);
-
         if (!$this->has($id)) {
             throw new NotFoundException();
         }
@@ -34,7 +31,10 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         $binding = $this->bindings[$id];
 
         if ($binding instanceof Closure) {
-            return $this->call($binding);
+            $instance = $this->call($binding);
+            $this->cacheInstance($id, $instance);
+
+            return $instance;
         }
 
         if (is_object($binding)) {
@@ -42,7 +42,7 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         }
 
         $built = $this->build($binding);
-        $this->bindings[$id] = $built;
+        $this->cacheInstance($id, $built);
 
         return $built;
     }
@@ -108,6 +108,11 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         }
 
         return $arguments;
+    }
+
+    protected function cacheInstance($id, $instance)
+    {
+        return $this->instances[$id] = $instance;
     }
 
     public function checkId($id)

@@ -21,7 +21,7 @@ class Psr11Test extends TestCase
         $this->assertTrue(method_exists($container, 'has'));
     }
 
-    public function testGotSameObjectGetTwice()
+    public function testGotSameObjectInTwiceGet()
     {
         $container = new Container();
 
