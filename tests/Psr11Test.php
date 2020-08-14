@@ -3,6 +3,8 @@
 namespace Tests;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Xiaker\Gourd\Container;
 
 class Psr11Test extends TestCase
@@ -33,5 +35,19 @@ class Psr11Test extends TestCase
         $second = $container->get('foo');
 
         $this->assertEquals($second, $first);
+    }
+
+    public function testThrowNotFountExceptionWhenBindingNotFound()
+    {
+        $this->expectException(NotFoundExceptionInterface::class);
+        $container = new Container();
+        $container->get('foo');
+    }
+
+    public function testThrowContainerExceptionWhenOtherError()
+    {
+        $this->expectException(ContainerExceptionInterface::class);
+        $container = new Container();
+        $container->set([], null);
     }
 }

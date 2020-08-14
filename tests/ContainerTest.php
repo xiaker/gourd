@@ -13,7 +13,7 @@ use Xiaker\Gourd\Container;
 
 class ContainerTest extends TestCase
 {
-    public function testSetBinding()
+    public function testBindingBySetMethod()
     {
         $container = new Container();
         $container->set('cb', function () {
@@ -23,7 +23,7 @@ class ContainerTest extends TestCase
         $this->assertTrue($container->get('cb'));
     }
 
-    public function testMakeCallback()
+    public function testBindingByClosure()
     {
         $container = new Container();
         $container->set('cb', function () {
@@ -33,7 +33,7 @@ class ContainerTest extends TestCase
         $this->assertEquals(new Author(), $container->get('cb'));
     }
 
-    public function testMakeDependencies()
+    public function testDependenciesResolution()
     {
         $container = new Container();
         $container->set(AuthorInterface::class, Author::class);
@@ -43,13 +43,13 @@ class ContainerTest extends TestCase
         $this->assertEquals('fatrbaby', $container->get('book')->getName());
     }
 
-    public function testMakeObjectToUse()
+    public function testGetAndUseObject()
     {
         $container = new Container();
         $container->set('reader', Reader::class);
 
         $reader = $container->get('reader');
-        $this->assertEquals(true, $reader->isLike());
+        $this->assertTrue($reader->isLike());
     }
 
     public function testDefaultValueCallback()
@@ -62,7 +62,7 @@ class ContainerTest extends TestCase
         $this->assertEquals(18, $container->get('age'));
     }
 
-    public function testArraySet()
+    public function testBindingByArrayOperation()
     {
         $container = new Container();
         $container['author'] = Author::class;
@@ -70,7 +70,7 @@ class ContainerTest extends TestCase
         $this->assertEquals('fatrbaby', $container->get('author')->getName());
     }
 
-    public function testArrayGet()
+    public function testGetObjectByArrayOperation()
     {
         $container = new Container();
         $container->set('cb', function () {

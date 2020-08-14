@@ -141,7 +141,10 @@ class Container implements ContainerInterface, ArrayAccess, Countable
     {
         if ($this->has($offset)) {
             unset($this->bindings[$offset]);
-            unset($this->instances[$offset]);
+
+            if (isset($this->instances[$offset])) {
+                unset($this->instances[$offset]);
+            }
         }
     }
 
