@@ -38,6 +38,7 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         }
 
         if (is_object($binding)) {
+            $this->cacheInstance($id, $binding);
             return $binding;
         }
 
