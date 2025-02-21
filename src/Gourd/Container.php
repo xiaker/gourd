@@ -7,21 +7,38 @@ namespace Xiaker\Gourd;
 use ArrayAccess;
 use Closure;
 use Countable;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionFunction;
+use ReflectionParameter;
 use Xiaker\Gourd\Exception\ContainerException;
 use Xiaker\Gourd\Exception\NotFoundException;
 
-class Container implements ContainerInterface, ArrayAccess, Countable
-{
-    protected $bindings = [];
-    protected $instances = [];
+use function count;
+use function is_object;
 
-    public function get($id)
+class Container implements ArrayAccess, ContainerInterface, Countable
+{
+    protected array $bindings = [];
+
+    protected array $instances = [];
+
+    /**
+     * @return mixed|object|null
+     *
+     * @throws ContainerException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundException
+     * @throws NotFoundExceptionInterface
+     * @throws ReflectionException
+     */
+    public function get(string $id): mixed
     {
-        if (!$this->has($id)) {
-            throw new NotFoundException();
+        if (! $this->has($id)) {
+            throw new NotFoundException(sprintf('Binding "%s" does not exist.', $id));
         }
 
         if (isset($this->instances[$id])) {
@@ -32,113 +49,145 @@ class Container implements ContainerInterface, ArrayAccess, Countable
 
         if ($binding instanceof Closure) {
             $instance = $this->call($binding);
-            $this->cacheInstance($id, $instance);
 
-            return $instance;
+            return $this->cacheInstance($id, $instance);
         }
 
         if (is_object($binding)) {
-            $this->cacheInstance($id, $binding);
-            return $binding;
+            return $this->cacheInstance($id, $binding);
         }
 
-        $built = $this->build($binding);
-        $this->cacheInstance($id, $built);
+        if (is_string($binding) && class_exists($binding)) {
+            $built = $this->build($binding);
 
-        return $built;
+            return $this->cacheInstance($id, $built);
+        }
+
+        return $binding;
     }
 
-    public function has($id): bool
+    public function has(string $id): bool
     {
-        $this->checkId($id);
-
         return isset($this->bindings[$id]);
     }
 
-    public function set($id, $binding): bool
+    public function set(string $id, mixed $binding): bool
     {
-        $this->checkId($id);
         $this->bindings[$id] = $binding;
 
         return true;
     }
 
-    public function register(ServiceProviderInterface $provider)
+    /**
+     * @return $this
+     */
+    public function register(ServiceProviderInterface $provider): Container
     {
         $provider->register($this);
 
         return $this;
     }
 
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ContainerExceptionInterface
+     */
     public function call(Closure $id)
     {
         $reflection = new ReflectionFunction($id);
-        $parameters = $reflection->getParameters();
-        $args = $this->buildParameterValues($parameters);
 
-        return $reflection->invokeArgs($args);
+        if ($reflection->getNumberOfRequiredParameters() === 0) {
+            return $reflection->invoke();
+        }
+
+        return $reflection->invokeArgs(
+            $this->buildParameterValues($reflection->getParameters())
+        );
     }
 
-    public function build($class)
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws ContainerException
+     * @throws ReflectionException
+     * @throws ContainerExceptionInterface
+     */
+    public function build($class): ?object
     {
         $reflection = new ReflectionClass($class);
         $constructor = $reflection->getConstructor();
 
-        if (null === $constructor) {
+        if ($constructor === null) {
             return $reflection->newInstance();
         }
 
         $parameters = $constructor->getParameters();
-        $arguments = $this->buildParameterValues($parameters);
 
-        return $reflection->newInstanceArgs($arguments);
+        return $reflection->newInstanceArgs(
+            $this->buildParameterValues($parameters)
+        );
     }
 
-    protected function buildParameterValues(array $parameters)
+    /**
+     * @param  array<ReflectionParameter>  $parameters
+     *
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface|ReflectionException
+     * @throws ContainerException
+     */
+    protected function buildParameterValues(array $parameters): array
     {
+        if (empty($parameters)) {
+            return [];
+        }
+
         $arguments = [];
 
         foreach ($parameters as $parameter) {
-            if ($parameter->isDefaultValueAvailable()) {
-                $arguments[] = $parameter->getDefaultValue();
-            } elseif ($class = $parameter->getClass()) {
-                $arguments[] = $this->get($class->getName());
+            if ($parameter->hasType() && $this->has($name = $parameter->getType()->getName())) {
+                $arguments[] = $this->get($name);
             } else {
-                throw new ContainerException(sprintf('Unable to resolve parameter: $%s', $parameter->getName()));
+                $arguments[] = $this->tryGetValue($parameter);
             }
         }
 
         return $arguments;
     }
 
-    protected function cacheInstance($id, $instance)
+    /**
+     * @throws ContainerException
+     */
+    protected function tryGetValue(ReflectionParameter $parameter)
+    {
+        if ($parameter->isDefaultValueAvailable()) {
+            return $parameter->getDefaultValue();
+        }
+
+        throw new ContainerException('Unable to resolve value for parameter '.$parameter->getName());
+    }
+
+    protected function cacheInstance(string $id, mixed $instance): mixed
     {
         return $this->instances[$id] = $instance;
     }
 
-    public function checkId($id)
-    {
-        if (!is_scalar($id)) {
-            throw new ContainerException('Invalid Container id');
-        }
-    }
-
-    public function offsetGet($offset)
+    public function offsetGet($offset): mixed
     {
         return $this->get($offset);
     }
 
-    public function offsetExists($offset)
+    public function offsetExists($offset): bool
     {
         return $this->has($offset);
     }
 
-    public function offsetSet($offset, $value)
+    public function offsetSet($offset, $value): void
     {
-        return $this->set($offset, $value);
+        $this->set($offset, $value);
     }
 
-    public function offsetUnset($offset)
+    public function offsetUnset($offset): void
     {
         if ($this->has($offset)) {
             unset($this->bindings[$offset]);
@@ -149,7 +198,7 @@ class Container implements ContainerInterface, ArrayAccess, Countable
         }
     }
 
-    public function count()
+    public function count(): int
     {
         return count($this->bindings);
     }

@@ -6,5 +6,5 @@ namespace Xiaker\Gourd;
 
 interface ServiceProviderInterface
 {
-    public function register(Container $gourd);
+    public function register(Container $gourd): void;
 }

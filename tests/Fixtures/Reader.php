@@ -9,7 +9,7 @@ class Reader implements ReaderInterface
         return $text;
     }
 
-    public function isLike()
+    public function isLike(): true
     {
         return true;
     }
