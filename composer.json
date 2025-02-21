@@ -3,11 +3,8 @@
     "description": "Lightweight PHP IoC container",
     "type": "library",
     "require": {
-        "php": ">=7.0.0",
-        "psr/container": "1.0.0"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^8.5"
+        "php": ">=8.2",
+        "psr/container": "^2.0.0"
     },
     "license": "MIT",
     "authors": [
@@ -25,6 +22,15 @@
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests"
+        }
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.7",
+        "laravel/pint": "^1.21"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
         }
     }
 }

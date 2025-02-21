@@ -7,7 +7,7 @@ use Xiaker\Gourd\ServiceProviderInterface;
 
 class DemoServiceProvider implements ServiceProviderInterface
 {
-    public function register(Container $gourd)
+    public function register(Container $gourd): void
     {
         $gourd['demo'] = function () {
             return 'FromDemoServiceProvider';
